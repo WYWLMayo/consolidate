@@ -1,6 +1,6 @@
 
 
-  echo "Please select the Orgnism for database searching:"
+  echo "Please select the Organism for database searching:"
   PS3_OLD=$PS3
   PS3="Please make a selection=> "; export PS3;
   select Database in Mouse Human Zebra_fish None
