@@ -1,0 +1,211 @@
+
+## convert Gi into GeneSymbol with combined DB: HS_GenID_GI_Acc_Name
+
+for i
+do
+  Tline=`wc -l $i | awk '{print $1;}'`;
+  ori_file=$1;
+  name=${1%_*};
+break;
+done
+
+DB=$2;
+
+  echo "" | awk 'END { print "ph_pep\tGenSymb\tAcc\tGI\tFull_Name\tpep_site\tPrt_site\tph_window\tPep_adj" }' > $name\_Sites_T.xls
+
+n=0
+STARTTIME=$(date +%s)
+No_lines=`wc -l $ori_file | awk '{print $1;}'`
+
+  while read line
+  do
+  peptides=`echo "$line"|awk '{print $1}'`
+  if [ $peptides != "Peptides" ] 
+  then
+   n=$(($n+1));
+   pep=`echo "$line"|awk '{gsub("pY","y",$1); gsub("pT","t",$1); gsub("pS","s",$1); gsub("aceK","k",$1); gsub("ggK","k",$1); print $1;}'`
+   PEP=`echo "$line"|awk '{gsub("pY","y",$1); gsub("pT","t",$1); gsub("pS","s",$1); gsub("aceK","k",$1); gsub("ggK","k",$1); print toupper($1);}'`
+   ph_pep=`echo "$line"|awk '{print $1;}'`
+   LC_ALL=C fgrep -i $PEP /research/labs/proteomics/pandey/m202766/protein_DB/$DB\_Uniprot*.1line | sort -t$'\t' -r  -k4,4 -k3,3nr |sort -t$'\t' -r -u -k4,4 > _match 
+
+## find N' and C' adjacent amino acids
+   PEP_adj=`head -n1 _match | gawk -F"\t" -v PEP=$PEP -v pep=$pep '
+				{ protein= $2; pep_site=match(protein,PEP);
+				  if (pep_site > 1) 
+				  { AA_N=substr(protein,(pep_site-1),1) ")";
+				  } else {AA_N="-)";}
+				  AA_C="(" substr(protein,(pep_site+length(PEP)),1);
+				  if (length(AA_C) < 2) {AA_C="(-";} 
+			  	  PEP_adj=AA_N pep AA_C;
+				  print PEP_adj 
+				}'`
+
+
+##  echo ">>>>>" $pep, $PEP, $ph_pep;
+   gawk -F"\t" -v Ph_PEP=$ph_pep -v pep=$pep -v PEP_adj=$PEP_adj '{ 
+	   split($1,acc,"|"); protein=$2; Acc=acc[2]; GI=acc[2]; GSYM=$4; GName=$6;  
+   	   PEP=toupper(pep); int_pst=match(protein,PEP);
+
+	   No_y=split(pep,NY,"y")-1; PyWIND=""; PRT_y=""; ST_y="";
+ 	   for (i=1; i<=No_y; i=i+1)
+         { Sy[i]=length(NY[i])+1+Sy[i-1]; Term="";
+           ST_y=ST_y "Y" Sy[i] ", ";
+           Py[i]=int_pst+Sy[i]-1;
+           if (Py[i] <= 7)
+             { PyWind[i]="-" substr(protein,1,(Py[i]-1)) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,7);
+               Term="yes";
+             }   
+           if ((Py[i]+7) >= length(protein))
+             { PyWind[i]=substr(protein,Py[i]-7,7) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,(length(protein)-Py[i]-1)) "-";
+               Term="yes";
+             }   
+           if (Term != "yes")
+             { PyWind[i]=substr(protein,Py[i]-7,7) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,7);
+             }   
+           PyWIND=PyWIND PyWind[i] ", ";
+           PRT_y=PRT_y "Y" Py[i] ", ";
+        }
+   
+      No_s=split(pep,NS,"s")-1; PsWIND=""; PRT_s=""; ST_s="";
+      for (i=1; i<=No_s; i=i+1)
+        { Ss[i]=length(NS[i])+1+Ss[i-1]; Term="";
+          ST_s=ST_s "S" Ss[i] ", ";
+          Ps[i]=int_pst+Ss[i]-1;
+          if (Ps[i] <= 7)
+           { PsWind[i]="-" substr(protein,1,(Ps[i]-1)) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,7);
+             Term="yes";
+           }   
+          if ((Ps[i]+7) >= length(protein)) 
+           { PsWind[i]=substr(protein,Ps[i]-7,7) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,(length(protein)-Ps[i]-1)) "-";
+             Term="yes";
+           }   
+          if (Term != "yes")
+           { PsWind[i]=substr(protein,Ps[i]-7,7) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,7);
+           }   
+          PsWIND=PsWIND PsWind[i] ", ";
+          PRT_s=PRT_s "S" Ps[i] ", ";
+       } 
+  
+      No_t=split(pep,NT,"t")-1; PtWIND=""; PRT_t=""; ST_t="";
+      for (i=1; i<=No_t; i=i+1)
+      {  St[i]=length(NT[i])+1+St[i-1]; Term="";
+         ST_t=ST_t "T" St[i] ", ";
+         Pt[i]=int_pst+St[i]-1;
+         if (Pt[i] <= 7)
+          { PtWind[i]="-" substr(protein,1,(Pt[i]-1)) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,7);
+            Term="yes";
+          }   
+      if ((Pt[i]+7) >= length(protein)) 
+       { PtWind[i]=substr(protein,Pt[i]-7,7) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,(length(protein)-Pt[i]-1)) "-";
+         Term="yes";
+       }   
+      if (Term != "yes")
+       {PtWind[i]=substr(protein,Pt[i]-7,7) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,7);
+       }   
+      PtWIND=PtWIND PtWind[i] ", ";
+      PRT_t=PRT_t "T" Pt[i] ", ";
+     }
+
+    No_k=split(pep,NK,"k")-1; PkWIND=""; PRT_k=""; ST_k="";
+      for (i=1; i<=No_k; i=i+1)
+      {  Sk[i]=length(NK[i])+1+Sk[i-1]; Term="";
+         ST_k=ST_k "K" Sk[i] ", ";
+         Pk[i]=int_pst+Sk[i]-1;
+         if (Pk[i] <= 7)
+          { PkWind[i]="-" substr(protein,1,(Pk[i]-1)) tolower(substr(protein,Pk[i],1)) substr(protein,Pk[i]+1,7);
+            Term="yes";
+          }
+      if ((Pk[i]+7) >= length(protein))
+       { PkWind[i]=substr(protein,Pk[i]-7,7) tolower(substr(protein,Pk[i],1)) substr(protein,Pk[i]+1,(length(protein)-Pk[i]-1)) "-";
+         Term="yes";
+       }
+      if (Term != "yes")
+       {PkWind[i]=substr(protein,Pk[i]-7,7) tolower(substr(protein,Pk[i],1)) substr(protein,Pk[i]+1,7);
+       }
+      PkWIND=PkWIND PkWind[i] ", ";
+      PRT_k=PRT_k "K" Pk[i] ", ";
+     }
+
+
+
+    if ((length(ST_y) > 1) && ((length(ST_s) > 1) || (length(ST_t) > 1))) { ST_y=ST_y "| ";} 
+    if ((length(ST_s) > 1) && (length(ST_t) > 1)){ ST_s=ST_s "| ";} 
+    if ((length(PRT_y) > 1) && ((length(PRT_s) > 1) || (length(PRT_t) > 1))) { PRT_y=PRT_y "| ";} 
+    if ((length(PRT_s) > 1) && (length(PRT_t) > 1)){ PRT_s=PRT_s "| ";} 
+    if ((length(PtWIND_y) > 1) && ((length(PtWIND_s) > 1) || (length(PtWIND_t) > 1))) { PtWIND_y=PtWIND_y "| ";}
+    if ((length(PtWIND_s) > 1) && (length(PtWIND_t) > 1)){ PtWIND_s=PtWIND_s "| ";}
+
+	if ( length(protein) > 1 ) 
+     {  ## pep=CMA_rmv(pep); GSYM=CMA_rmv(GSYM); Acc=CMA_rmv(Acc); GI=CMA_rmv(GI); 
+	if (length(PkWIND) < 2)
+		{pep_ph_site=ST_y ST_s ST_t; 								## pep_ph_site=CMA_rmv(pep_ph_site);
+		 prt_ph_site=PRT_y PRT_s PRT_t; 							## prt_ph_site=CMA_rmv(prt_ph_site);
+	 	 ph_wind=PyWIND PsWIND PtWIND;
+		} else
+		{pep_ph_site=ST_k;
+		 prt_ph_site=PRT_k;
+		 ph_wind=PkWIND;
+		} 							## ph_wind=CMA_rmv(ph_wind);
+	printf "%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\n", pep, GSYM, Acc, GI, GName, pep_ph_site, prt_ph_site, ph_wind, PEP_adj;
+     } else { printf "%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\n", pep, "Not_Found", "Not_Found", "Not_Found", "Not_Found","Not_Found", "Not_Found", "Not_Found", "Not_Found";
+       }
+    }' _match >> $name\_Sites_T.xls
+
+  percent=`echo $n $No_lines | gawk '{printf "%0.3f", $1/$2*100}'`
+  CurrentTTIME=$(date +%s)
+  time=$(($CurrentTTIME - $STARTTIME))
+  Ntime=`echo $time $n $No_lines |gawk '{printf "%0.0f", ($3-$2)*($1/$2);}'`
+  ((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+  timespnt=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+  ((sec=Ntime%60,  m=Ntime/60, min=m%60, hrs=m/60))
+  timeneed=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+
+  echo -ne "  \r$n/$No_lines;     $percent%;    Spent $timespnt and need ~ $timeneed to finish."
+  fi
+  done < $ori_file
+
+printf "\n\n";
+
+echo "> Generating a table that is centerized by protein Acc. # ."
+ 
+  LC_ALL=C fgrep -w -v "GenSymb"  $name\_Sites_T.xls | sort -t$'\t' -u -k3,3 | gawk -F"\t" '{print $3;}'> _uniqPrt
+  printf "%-s\t%-s\t%-s\t%-s\t%-s\n" "GenSymb" "Acc" "GI" "Full_Name" "Prt_site" > $name\_ph_prt.xls
+
+n=0
+STARTTIME=$(date +%s)
+No_lines=`wc -l _uniqPrt | gawk '{print $1;}'`
+ 
+  while read line;
+  do
+    LC_ALL=C fgrep $line $name\_Sites_T.xls | 
+		gawk -F"\t" -v acc="$line" '{if ($3 == acc) {gsub(/\|/,"",$7);ph_site=ph_site $7 ",";
+                                                Acc=$3; SYM=$2; GI=$4; FNAME=$5;
+                                                 }}
+                                                  END {gsub(" ","",ph_site); gsub(",,",",",ph_site);
+                                                       N=split(ph_site,PS,",");
+                                                       for (n=1; n<=N; n=n+1)
+                                                        {for (m=n+1; m<=N; m=m+1)
+                                                          {sites=sites PS[m] ",";
+                                                          }
+                                                         if (sites !~ PS[n])
+                                                            {uniq=uniq PS[n] ", ";
+                                                            } sites="";
+                                                          }
+                                                         printf "%-s\t%-s\t%-s\t%-s\t%-s\n",SYM,Acc,GI,FNAME,uniq;
+                                                    }' >> $name\_ph_prt.xls
+
+  n=$(($n+1));
+  percent=`echo $n $No_lines | gawk '{printf "%0.3f", $1/$2*100}'`
+  CurrentTTIME=$(date +%s)
+  time=$(($CurrentTTIME - $STARTTIME))
+  Ntime=`echo $time $n $No_lines |gawk '{printf "%0.0f", ($3-$2)*($1/$2);}'`
+  ((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+  timespnt=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+  ((sec=Ntime%60,  m=Ntime/60, min=m%60, hrs=m/60))
+  timeneed=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+
+  echo -ne "  \r$n/$No_lines;     $percent%;    Spent $timespnt and need ~ $timeneed to finish."
+
+  done < _uniqPrt
+ 
+printf "\n\n"

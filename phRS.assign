@@ -1,0 +1,98 @@
+## for  i
+##  do
+  f_name=$1
+  _phRS_sc=$2
+## done
+
+  awk -F"\t" -v phRS_sc=$_phRS_sc 'BEGIN { printf "%-s\t%-s\t%-s\t%-s\t", "Status", "# sites", "Sequence", "phSites"; version="";} 
+		/Sequence/ {for (fs=1; fs<=NF-1; fs=fs+1)
+                	     { 	if (($fs == "Sequence" ) || ($fs == "Annotated Sequence")) {Seq=fs; $fs="Sequence_Ori";}
+                      		if ($fs == "Modifications") {Mod=fs;}
+                       		if (($fs == "phosphoRS Site Probabilities") || ($fs == "PhosphoRS: Best Site Probabilities") || ($fs == "ptmRS: Phospho Site Probabilities") || ($fs == "ptmRS: Best Site Probabilities")) 
+					{phRS=fs; 
+					 if ($fs == "phosphoRS Site Probabilities") {version="PD1.4";}
+					 if ($fs == "PhosphoRS: Best Site Probabilities") {version="PD2.4"}
+					 if ($fs == "ptmRS: Phospho Site Probabilities") {version="PD2.4";}
+					 if ($fs == "ptmRS: Best Site Probabilities") {version="PD2.4";}
+					}
+				if ($fs == "Enrichment") {Rich=fs}
+				if (length($fs) > 0) {printf "%-s\t", $fs;}
+				## sub(/Sequence/,"Sequence_Ori",$0); 
+                     	     } printf "%-s\n","";
+			   }
+		   
+	      !/Sequence/ { I=0; T_scr=0; phSite=""; cor="No"; y=0; st=0; Y_SCR=0; ST_SCR=0; Y_site=0;ori_Y="";
+			      if (version == "PD1.4") {phpep=$Seq; phPEP=toupper($Seq);}
+			      if ((version == "PD2.0") || (version == "PD2.4"))
+				 {split($Seq,SEQ,"."); phpep=SEQ[2]; phPEP=toupper(SEQ[2]);}
+			      N=split($phRS,_phRS,"; "); 
+			      for (i=1;i<=N;i=i+1)
+				{n=split(_phRS[i],ph,": "); score[i]=ph[2]; 
+				 if (version == "PD1.4")
+					{ aa[i]=tolower(substr(ph[1],1,1)); 
+				 	  position[i]=substr(ph[1],3,(length(ph[1])-3)); 
+					  T_scr=T_scr+score[i]
+					}
+				if (version == "PD2.0")
+                                        { aa[i]=tolower(substr(ph[1],1,1));
+					  phs=match(ph[1],"\\("); 
+                                          position[i]=substr(ph[1],2,(phs-2)); 
+                                          T_scr=T_scr+score[i]
+                                        }
+ 				 if (version == "PD2.4")
+					{ aa[i]=tolower(substr(ph[1],1,1));
+					  phs=match(ph[1],"\\(");
+					  position[i]=substr(ph[1],2,(phs-2));
+					  T_scr=T_scr+score[i]; 
+					}
+				 if (score[i] >= phRS_sc) 
+					{I=I+1; AA[I]=aa[i]; P[I]=position[i];
+					 ori_aa[I]=substr(phpep,P[I],1);
+					 _phpep=substr(phPEP,1,(P[I]-1)); phpep_=substr(phPEP,(P[I]+1),(length(phPEP)-P[I]));
+					 phPEP=_phpep AA[I] phpep_;
+					 phSite=phSite ";" toupper(AA[I]) P[I];
+					 if ((AA[I] != ori_aa[I]) && (cor == "No")) {cor="Yes";} 
+					}  
+				}
+			      if (T_scr/100 != int(T_scr/100)) {T_scr=int(T_scr/100)+1; } else {T_scr=int(T_scr/100);}
+                              if (($Rich == "TiO2") || ($Rich == "IMAC") || ($Rich == "AceK") || ($Rich == "UbK")) 
+			 	{ if ((I < 1) || (I < T_scr)) {status="Ambiguous";} 
+					else { if (cor == "Yes") {status="Corrected"}
+					else {status="Not corrected"}
+				     	     }
+				}
+
+## to set priority for tyrosine in pY enriched experiment:
+
+			     if ($Rich == "pY") 
+				{ if ((T_scr - I) >= 1)
+                                	{ for (i=1; i<=N; i=i+1)
+                                        	{ if ((aa[i] == "y") && (score[i] >30) && (score[i]< phRS_sc))
+                                                	{ y=y+1; Y_scr[y]=score[i]; Y_pos[y]=position[i];
+                                                 	  if (Y_scr[y] >Y_scr[y-1]) 
+								{ Y_SCR=Y_scr[y]; Y_site=Y_pos[y]} else {Y_SCR=Y_scr[y-1]; Y_site=Y_pos[y-1];}
+                                                	}
+						   if ((aa[i] != "y") && (score[i] >30) && (score[i] < phRS_sc))
+							{ st=st+1; ST_scr[st]=score[i];
+							  if (ST_scr[st] > ST_scr[st-1]) 	
+								{ ST_SCR=ST_scr[st];} else { ST_SCR=ST_scr[st-1];}
+							}
+						 }
+					   if ((Y_SCR >= ST_SCR) && (Y_SCR > 0) && (ST_SCR > 0))
+						{ ori_Y=substr($Seq,Y_site,1); I=I+1;
+						  _phpep=substr(phPEP,1,(Y_site-1)); phpep_=substr(phPEP,(Y_site+1),(length(phPEP)-Y_site));
+                                         	  phPEP=_phpep "y" phpep_;
+						  phSite=phSite ";Y" Y_site;
+						  if (("y" != ori_Y) && (cor == "No")) {cor="Yes";}		
+						}
+					}
+                              	if ((I < 1) || (I < (T_scr))) {status="Ambiguous";}
+                                	else { if (cor == "Yes") {status="Corrected"}
+                                        	else {status="Not corrected"}
+                                     	     }
+				}
+
+			  phSite=substr(phSite,2);
+                          printf "%-s\t%-s\t%-s\t%-s\t%-s\n", status, "\047" I "/" T_scr, phPEP, phSite, $0;   ## \047 stands for apostrophe .
+			}'  $f_name  														##> $i\.phRS
+

@@ -1,0 +1,9 @@
+## echo $1
+## echo $2 
+ awk -v Acc=$1 '{if ($0 ~ Acc " ")
+			{print $0; getline;
+			 while ($1 !~ />/) 
+         			{print $0; getline;
+				}
+			}
+		}' $2

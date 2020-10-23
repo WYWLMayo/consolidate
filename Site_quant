@@ -1,0 +1,57 @@
+##  report the quantification based on ptm-Site; input file: name_Sites_T_ave.xls 
+
+for i
+do
+  name=${i%.*}
+  awk -F"\t" '
+	{for (n=1;n<=NF;n=n+1)
+	   { if ($n == "Prt_site") { SITE=n }
+	}
+	if ($SITE == "Prt_site") 
+		{printf "%-s\t%-s\t%-s\t%-s\n", "prt_site_ind", "prt_site_GNSMB","Ph_Site_Window", $0; }
+	     else {PrtSite=$SITE; gsub(" ","",PrtSite); gsub(/\|/,"",PrtSite); 
+		   n=split(PrtSite,prt_site,","); split($8,pep_window,",")
+		    if (length(prt_site[n]) < 1) {n=n-1}
+		    for (I=1;I<=n;I=I+1)
+			{ ##  printf "%-s\t%-s\t%-s\t%-s\n", prt_site[I], prt_site[I] "_" $2 "_" $4, pep_window[I], $0;
+			  AA=substr(prt_site[I],1,1); pos=substr(prt_site[I],2,length(prt_site[I])-1);
+			  printf "%-s\t%-s\t%-s\t%-s\n", prt_site[I], $2 "_" $4 "_" pos "_" AA, pep_window[I], $0;
+			} 
+		   }
+	}' $i > _$i
+done
+awk '{if ($0 !~ "prt_site_GNSMB") {print $2}}' _$i | sort -u > _site_list
+head -n1 _$i | awk '{ printf "%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t",  "prt_site_ind","prt_site_GNSMB","Ph_Site_Window","Symbol","Acc","PrtName","IdPeptides", "#Ph_pep";
+			for (fs=1; fs<=NF; fs=fs+1)
+                                {if ($fs ~ "Sum")
+                                  {S=S+1; Sum[S]=fs;
+				   printf "%-s\t", $Sum[S];
+                                  }
+                                }
+			printf "\n";
+		      }' > $name\_quant.xls
+while read line
+do
+	head -n1 _$i > _prt_site
+	grep -w "$line" _$i >> _prt_site
+	awk -F"\t" '
+	 /prt_site_GNSMB/ { for (fs=1; fs<=NF; fs=fs+1) 
+				{if ($fs ~ "Sum") 
+		 		  {S=S+1; Sum[S]=fs;
+		 		  }
+				} getline;
+			  }
+	{for (s=1; s<=S; s=s+1) 
+		{quant[s]=quant[s]+$Sum[s]	
+		} 
+	 if (Ph_Pep !~ $4) {Ph_Pep=Ph_Pep $4 ", "; P=P+1 }  
+	} 
+	END {	Ph_Pep=substr(Ph_Pep,1,(length(Ph_Pep)-2));
+		printf "%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t", $1, $2, $3, $5, $7, $8, Ph_Pep, P;
+		for (s=1; s<=S; s=s+1)
+			{printf "%-s\t", quant[s];
+			}
+		printf "\n";
+	    }' _prt_site >> $name\_quant.xls
+done < _site_list
+	    

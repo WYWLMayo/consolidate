@@ -1,0 +1,104 @@
+
+## to merge protein information with peptide and spectrum value (site file with sum.xls file)
+RICH=`head -n1 _enrichment`
+for i 
+do
+  name=${i%_*}; 
+  #echo $name;
+  head -n1 $i >  $name\_M.xls;
+
+  awk -F"\t" 'function CMA_rmv(value)
+ 		      { val=""; 
+			val=substr(value,1,(length(value)-1))
+			return val;
+ 		      }
+		{ if ($1 != "ph_pep") 
+				  	{i=i+1; line[i]=$0; pep[i]=$1; gsym[i]=$2; acc[i]=$3; gi[i]=$4; name[i]=$5; 
+				  	 pepsite[i]=$6; prtsite[i]=$7; phwind[i]=$8; Pep_adj[i]=$9
+				 	}
+				 }
+				END { I=1;
+					  for (i=2; i<=NR; i=i+1) 
+						{ if (pep[i] == pep[i-1]) 
+							{PEP[I]=pep[i-1]; GSYM[I]=GSYM[I] gsym[i-1] "|| ";
+                             ACC[I]=ACC[I] acc[i-1] "|| "; GI[I]=GI[I] gi[i-1] "|| ";
+                             NAME[I]=NAME[I] name[i-1] "|| "; PEPSITE[I]=PEPSITE[I] pepsite[i-1] "|| ";
+                             PRTSITE[I]=PRTSITE[I] prtsite[i-1] "|| "; PHWIND[I]=PHWIND[I] phwind[i-1] "|| ";
+							} else {I=I+1;
+                                    PEP[I-1]=pep[i-1]; GSYM[I-1]=GSYM[I-1] gsym[i-1] ",";
+                                    ACC[I-1]=ACC[I-1] acc[i-1] ","; GI[I-1]=GI[I-1] gi[i-1] ",";
+                                    NAME[I-1]=NAME[I-1] name[i-1]; PEPSITE[I-1]=PEPSITE[I-1] pepsite[i-1];
+                                    PRTSITE[I-1]=PRTSITE[I-1] prtsite[i-1]; PHWIND[I-1]=PHWIND[I-1] phwind[i-1];
+				    GSYM[I-1]=CMA_rmv(GSYM[I-1]); ACC[I-1]=CMA_rmv(ACC[I-1]); GI[I-1]=CMA_rmv(GI[I-1]);
+				    PEPSITE[I-1]=CMA_rmv(PEPSITE[I-1]); PRTSITE[I-1]=CMA_rmv(PRTSITE[I-1]); 
+				    PHWIND[I-1]=CMA_rmv(PHWIND[I-1]); PEP_ADJ[I-1]=Pep_adj[i-1];
+ 								    printf "%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\n", PEP[I-1], GSYM[I-1],ACC[I-1], GI[I-1], NAME[I-1], PEPSITE[I-1], PRTSITE[I-1], PHWIND[I-1], PEP_ADJ[I-1];
+								   }
+						}
+					}' $i >> $name\_M.xls
+						
+  name2=${i%_Site*}
+
+n=0
+STARTTIME=$(date +%s)
+No_lines=` wc -l $name\_M.xls $name\_T.xls| awk '/total/ { print $1}'`
+
+if [ -f $name2\_sum.xls ]; then
+  for f in $i $name\_M.xls
+  do 
+	name3=${f%.xls}
+	printf "%-s\t%-s\n" "`head -n1 $f`" "`head -n1 $name2\_sum.xls`" >  $name3\_sum.xls
+##    	printf "%-s\t%-s\n" "`head -n1 $f`" "`head -n1 $name2\_max.xls`" >  $name3\_max.xls
+    	printf "%-s\t%-s\n" "`head -n1 $f`" "`head -n1 $name2\_ave.xls`" >  $name3\_ave.xls
+
+    while read line
+	do
+ 
+	pep=`echo "$line" | awk -v Rich="$RICH" '{ if ((Rich == "IMAC") || (Rich == "TiO2") || (Rich == "pY")) 
+							{gsub("y","pY",$1); gsub("t","pT",$1); gsub("s","pS",$1); 
+							}
+						   if (Rich == "AceK" ) 
+							{gsub("k","aceK",$1); 
+							}
+						   if (Rich == "UbK") 
+							{gsub("k","ggK",$1); 
+							} 
+						   print $1;}'` 
+		
+	LC_ALL=C fgrep $pep $name2\_sum.xls |
+		awk -F"\t" -v site="$line" -v ph_pep=$pep '{if ($1 == ph_pep) 
+								{ printf "%-s\t%-s\n", site, $0;}
+							    }' >> $name3\_sum.xls
+
+        ## pep=`echo "$line" | awk '{ gsub("y","pY",$1); gsub("t","pT",$1); gsub("s","pS",$1); print $1;}'`
+##       grep $pep $name2\_max.xls |
+##		awk -F "\t" -v site="$line" -v ph_pep=$pep '{if ($1 == ph_pep)
+##                              		                          { printf "%-s\t%-s\n", site, $0;}
+##                                        	            }' >> $name3\_max.xls
+
+        ## pep=`echo "$line" | awk '{ gsub("y","pY",$1); gsub("t","pT",$1); gsub("s","pS",$1); print $1;}'`
+
+        LC_ALL=C fgrep $pep $name2\_ave.xls |
+		awk -F"\t" -v site="$line" -v ph_pep=$pep '{if ($1 == ph_pep)
+                              					{ printf "%-s\t%-s\n", site, $0;}
+                                       		             }' $name2\_ave.xls >> $name3\_ave.xls
+
+	  n=$(($n+1));
+	  percent=`echo $n $No_lines | awk '{printf "%0.3f", $1/$2*100}'`
+	  CurrentTTIME=$(date +%s)
+	  time=$(($CurrentTTIME - $STARTTIME))
+	  Ntime=`echo $time $n $No_lines |awk '{printf "%0.0f", ($3-$2)*($1/$2);}'`
+	  ((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+	  timespnt=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+	  ((sec=Ntime%60,  m=Ntime/60, min=m%60, hrs=m/60))
+	  timeneed=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+
+	  echo -ne "  \r$n/$No_lines;     $percent%;    Spent $timespnt and need ~ $timeneed to finish."
+
+	done < $f
+  done
+fi
+done
+
+printf "\n\n";
+

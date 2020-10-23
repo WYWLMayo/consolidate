@@ -1,0 +1,270 @@
+## required databases : gene_info and gene2refseq
+# gene_info and gene2refseq can be downloaded from NBCI ftp ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/ ,
+# and RefSeq protein fasta DB is from NCBI ftp://ftp.ncbi.nlm.nih.gov/refseq   
+
+echo "Please provide the species name and Refseq DB version (divided by comma. e.g. Homo sapiens,88  or Mus musculus,88):"
+read _sp;
+## if [ $_sp != "n" ]; then
+   sp=${_sp%\,*};
+   ver=${_sp#*\,};
+   echo ">" $sp
+   echo ">" $ver
+### fi
+
+echo "Please provide the abbreviation of the species (e.g. HS or MM):"
+read ab;
+if [ $ab != "n" ]; then
+   ab=$ab;
+fi
+ 
+echo "Please provide the taxonomy ID (e.g. 9606 or 10090):"
+read tx
+if [ $tx != "n" ]; then
+   tx=$tx;
+fi
+
+printf "\n"
+
+swtch="on";
+### filter refseq DB for HS
+
+printf "Extracting $sp proteins:\n";
+
+
+if [ -f  $ab\_Refseq$ver.tfa ]
+ then
+   ent=`LC_ALL=C fgrep ">" $ab\_Refseq$ver.tfa| wc -l | mawk '{print $1;}'`
+   printf "Processed: $ent entries.\n\n";
+ else
+
+
+
+
+STARTTIME=$(date +%s)
+
+for i in *.protein.faa
+do
+  echo "processing $i"; 
+  mawk -v SP="$sp" '{sp=SP; end="stt"; 
+					while ($0 ~ sp ) 
+					 { print $0; 			
+						  do {if (getline == 0) {end="EOF"}   
+								{ if (($0 ~ sp || $1 !~ /gi\|/) && (end !~ "EOF"))  { print $0;}
+								} 
+                             }  while (($1 !~ /gi\|/ || $0 ~ sp) && (end !~ "EOF"))
+                  	   }
+                 }' $i >> $ab\_Refseq$ver.tfa
+
+done
+   No_prot=`LC_ALL=C fgrep "$sp"  $ab\_Refseq$ver.tfa | wc -l | mawk '{print $1;}'`;
+   printf "Processed: $No_prot entries.\n";
+
+ENDTIME=$(date +%s)
+time=$(($ENDTIME - $STARTTIME))
+((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+timestamp=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+printf "Takes $timestamp to finish. \n\n";
+
+if [ $No_prot -lt 1000 ]; then
+   echo "please check the name of the species"
+   swtch="off"
+fi
+
+fi  ##
+
+printf "Extracting $sp from gene_info: \n";
+
+if [ -f  $ab\_gene_info$ver ]
+ then
+   No_gene_info=`wc -l $ab\_gene_info$ver | mawk '{print $1;}'`;
+   printf " Processed: $No_gene_info entries. \n\n"
+ else
+
+
+
+STARTTIME=$(date +%s)
+
+## printf "Extracting $sp gene_info:";
+LC_ALL=C fgrep -w $tx *gene_info > $ab\_gene_info$ver
+No_gene_info=`wc -l $ab\_gene_info$ver | mawk '{print $1;}'`;
+
+if [  $No_gene_info -lt 1000 ]; then
+   echo "please check the taxonomy ID"
+   swtch="off"
+fi
+   No_gene_info=`wc -l $ab\_gene_info$ver | mawk '{print $1;}'`;
+   printf " Processed: $No_gene_info entries. \n\n"
+
+fi ##
+
+printf "Extracting $sp from gene2refseq:";
+
+if [ -f  $ab\_gene2refseq$ver ]
+ then
+   No_gene2refseq=`wc -l $ab\_gene2refseq$ver | mawk '{print $1;}'`;
+   printf "Processed:   $No_gene2refseq entries. \n\n"
+ else
+
+
+LC_ALL=C fgrep -i -w $tx gene2refseq | mawk -v TX="$tx" '{if ($1 == TX) {print $0}; }' | sort -t $'\t' -i -u -k6,6 > $ab\_gene2refseq$ver
+No_gene2refseq=`wc -l $ab\_gene2refseq$ver | mawk '{print $1;}'`;
+printf " $No_gene2refseq \n";
+if [  $No_gene2refseq -lt 1000 ]; then
+   echo "please check the taxonomy ID"
+   swtch="off"
+fi
+
+if [ $swtch != "off" ]; then
+
+ENDTIME=$(date +%s)
+time=$(($ENDTIME - $STARTTIME))
+((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+timestamp=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+   No_gene2refseq=`wc -l $ab\_gene2refseq$ver | mawk '{print $1;}'`;
+   printf "Processed:   $No_gene2refseq entries. \n"
+printf "Takes $timestamp to finish. \n\n";
+
+fi
+
+fi ##
+
+## combine $ab_gene2refseq$ver  and $ab_gene_info$ver into one database for converting Acc or Gi into Genesymbol
+
+printf "Combining  $ab\_gene2refseq$ver and $ab\_gene_info$ver into one database: \n";
+
+if [ -f $ab\_GenID_GI_Acc_Name.Uniq ]
+ then 
+   printf "Processed:" 
+   wc -l $ab\_GenID_GI_Acc_Name.Uniq
+   printf "\n\n";
+ else
+
+STARTTIME=$(date +%s)
+
+## printf "combining  $ab\_gene2refseq$ver and $ab\_gene_info$ver into one database: \n";
+Tline=`wc -l $ab\_gene2refseq$ver | mawk '{print $1;}'`;
+echo | mawk 'END { print "tax_id\tGeneID\tstatus\tRNA_nucleotide_accession.version\tRNA_nucleotide_gi\tprotein_accession.version\tprotein_gi\ttax_id\tGeneID\tSymbol\tLocusTag\tSynonyms\tdbXrefs\tchromosome\tmap_location\tdescription\ttype_of_gene\tSymbol_from_nomenclature_authority\tFull_name_from_nomenclature_authority\tNomenclature_status\tOther_designations\tModification_date"}' > $ab\_GenID_GI_Acc_Name.Uniq
+
+n=0;
+n0=0;
+
+## printf "[."; N=0;  while [ $N -lt 200 ] ; do N=$((N+1)); echo $N | mawk '{ if ($1/20 == int($1/20)) { printf "%-s",$1/2;} else {printf "%-s","."}}'; done; printf "] \n";
+## printf "["
+
+ while read line
+ do
+  genID=`echo $line|mawk '{print $2;}'`
+  head=`echo $line|mawk '{printf "%-s\t%-s\t%-s\t%-s\t%-s\t%-s\t%-s\n", $1,$2,$3,$4,$5,$6,$7;}'`
+  LC_ALL=C fgrep -i -w $genID $ab\_gene_info$ver | mawk -v GenID="$genID" -v Head="$head" '{if (GenID == $2) {printf "%-s\t%-s\n", Head,$0;}}' >> $ab\_GenID_GI_Acc_Name.Uniq
+  n=$(($n+1));
+
+  percent=`echo $n $No_gene2refseq | mawk '{printf "%0.3f", $1/$2*100}'`
+  CurrentTTIME=$(date +%s)
+  time=$(($CurrentTTIME - $STARTTIME))
+  Ntime=`echo $time $n $No_gene2refseq |mawk '{printf "%0.0f", ($3-$2)*($1/$2);}'`
+##   Ntime=`echo $time $percent |mawk '{printf "%0.0f", ($1/$2*100-$1);}'` 
+  ((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+  timespnt=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+  ((sec=Ntime%60,  m=Ntime/60, min=m%60, hrs=m/60))
+  timeneed=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+
+  echo -ne "\r$n/$No_gene2refseq;     $percent%;    Spent $timespnt and need ~ $timeneed to finish."
+
+##  n_0=`echo $n0 |  mawk -v n=$n -v gene=$No_gene2refseq '{ if ((n/gene*100-$1) >= 0.5)
+##                                                    { n0=n/gene*100;
+##                                                      print n0, "yes";
+##                                                    } else {print $1, "no";}
+##                                                }'` 
+ 
+##  n0=`echo "$n_0" | mawk '{print $1;}'`
+##   KaiG=`echo "$n_0" | mawk '{print $2;}'`
+##  if [ $KaiG = "yes" ]; then
+##   echo $n0 |mawk '{if (int($1)/20 == int($1/20))
+##        { printf "%-s",int($1)/2;
+##        } else {printf "%-s","."
+##                }}';
+##  fi
+
+##   echo $n "out of" $Tline "are done"; echo ;
+ done <  $ab\_gene2refseq$ver 
+## printf "]\n";
+
+   printf "Processed:"
+   wc -l $ab\_GenID_GI_Acc_Name.Uniq
+   printf "\n\n";
+fi ##
+
+## head -n1 HS_GenID_GI_Acc_Name > HS_GenID_GI_Acc_Name.Uniq
+##  sort -t$'\t' -r -k6,6 -u HS_GenID_GI_Acc_Name >>  HS_GenID_GI_Acc_Name.Uniq
+
+## ENDTIME=$(date +%s)
+## time=$(($ENDTIME - $STARTTIME))
+## ((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+## timestamp=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+## echo "Takes $timestamp to finish";
+
+
+## convert fasta DB into one line per entry DB and add Genesymbol, description and GeneID
+
+printf "converting $sp fasta DB into one line per entry with Genesymbol, description and GeneID: \n"
+name=$ab\_Refseq$ver
+mawk '/\>gi/ {printf "\n"; printf "%-s\t", $0;} !/gi\|/ {printf "%-s", $1;}' $name\.tfa | sed -e 's///g' -e 's///g' -e '/^$/d'> $name\.1line
+
+## rm $name\.1line\.GenSym
+STARTTIME=$(date +%s)
+
+n=0;
+n0=0;
+## printf "[."; N=0;  while [ $N -lt 200 ] ; do N=$((N+1)); echo $N | mawk '{ if ($1/20 == int($1/20)) { printf "%-s",$1/2;} else {printf "%-s","."}}'; done; printf "] \n";
+## printf "["
+No_entries=`wc -l $name\.1line | mawk '{print $1;}'`;	
+
+while read line
+do
+  Acc=`echo "$line" | mawk -F"\t" '{split($1,acc,"\|"); print acc[4];}'` ; 
+  Gen_Inf=`LC_ALL=C fgrep -i -w $Acc $ab\_GenID_GI_Acc_Name.Uniq | mawk -F"\t" -v ACC=$Acc '{ if ($6 == ACC) 
+										{ if (length($18) < 2) { G_sym=$10;} else {G_sym=$18;}
+										  if (length($19) < 2) { G_name=$16 "__";} else {G_name=$19;} 
+										  printf "%-s\t%-s\t%-s\n", G_sym, $2, G_name; }}'`
+  if [ "$Acc" != "" ]; then
+   echo "$line" | mawk -F"\t" -v Gene="$Gen_Inf" '{printf "%-s\t%-s\t%-s\n", $0, length($2), Gene;}' >> $name\.1line\.GenSym
+  fi
+
+  n=$(($n+1));
+  percent=`echo $n $No_entries | mawk '{printf "%0.3f", $1/$2*100}'`
+  CurrentTTIME=$(date +%s)
+  time=$(($CurrentTTIME - $STARTTIME))
+  Ntime=`echo $time $n $No_entries |mawk '{printf "%0.0f", ($3-$2)*($1/$2);}'` 
+  ((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+  timespnt=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+  ((sec=Ntime%60,  m=Ntime/60, min=m%60, hrs=m/60))
+  timeneed=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+
+  echo -ne "\r$n/$No_entries;     $percent%;    Spent $timespnt and need ~ $timeneed to finish."
+
+##  n_0=`echo $n0 |  mawk -v n=$n -v gene=$No_gene2refseq '{ if ((n/gene*100-$1) >= 0.5)
+##                                                    { n0=n/gene*100;
+##                                                      print n0, "yes";
+##                                                    } else {print $1, "no";}
+##                                                }'`
+##  n0=`echo "$n_0" | mawk '{print $1;}'`
+##  KaiG=`echo "$n_0" | mawk '{print $2;}'`
+##  if [ $KaiG = "yes" ]; then
+##   echo $n0 |mawk '{if (int($1)/20 == int($1/20)) 
+##	{ printf "%-s",int($1)/2;
+##	} else {printf "%-s","."
+##		}}';
+##  fi
+
+done < $name\.1line
+printf "Processed:  "
+wc -l $name\.1line\.GenSym
+printf "\n\n";
+
+## ENDTIME=$(date +%s)
+## time=$(($ENDTIME - $STARTTIME))
+## ((sec=time%60,  m=time/60, min=m%60, hrs=m/60))
+## timestamp=$(printf "%02d:%02d:%02d" $hrs $min $sec)
+## echo "Takes $timestamp to finish";
+
+
