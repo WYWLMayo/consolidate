@@ -1,6 +1,9 @@
 
 ## convert Gi into GeneSymbol with combined DB: HS_GenID_GI_Acc_Name
 
+DIR=$( dirname "$0" ) # Relative path to this script
+DB_DIR="$DIR/../protein_DB" # Path to the database directory
+
 for i
 do
   Tline=`wc -l $i | awk '{print $1;}'`;
@@ -26,7 +29,7 @@ No_lines=`wc -l $ori_file | awk '{print $1;}'`
    pep=`echo "$line"|awk '{gsub("pY","y",$1); gsub("pT","t",$1); gsub("pS","s",$1); gsub("aceK","k",$1); gsub("ggK","k",$1); print $1;}'`
    PEP=`echo "$line"|awk '{gsub("pY","y",$1); gsub("pT","t",$1); gsub("pS","s",$1); gsub("aceK","k",$1); gsub("ggK","k",$1); print toupper($1);}'`
    ph_pep=`echo "$line"|awk '{print $1;}'`
-   LC_ALL=C fgrep -i $PEP /research/labs/proteomics/pandey/m202766/protein_DB/$DB\_Uniprot*.1line | sort -t$'\t' -r  -k4,4 -k3,3nr |sort -t$'\t' -r -u -k4,4 > _match 
+   LC_ALL=C fgrep -i $PEP "$DB_DIR/$DB\_Uniprot*.1line" | sort -t$'\t' -r  -k4,4 -k3,3nr |sort -t$'\t' -r -u -k4,4 > _match 
 
 ## find N' and C' adjacent amino acids
    PEP_adj=`head -n1 _match | gawk -F"\t" -v PEP=$PEP -v pep=$pep '
