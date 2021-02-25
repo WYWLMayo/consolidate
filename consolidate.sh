@@ -1,4 +1,4 @@
-
+  DIR=$( dirname "$0" ) # Relative path to this script
 
   echo "Please select the Organism for database searching:"
   PS3_OLD=$PS3
@@ -99,7 +99,7 @@ if [ "$phRS" != "No" ]; then
 ##         /xinyanwu/MS_databases/programs/GoDaddy/phRS.assign $name.NoCoElut > $name.phRS
 ##        entry=`wc -l $name.NoCoElut | awk '{print $1;}'`
 ##     fi
-    /research/labs/proteomics/pandey/m202766/programs/phRS.assign $i $phRS > $name.phRS
+    "$DIR/phRS.assign" $i $phRS > $name.phRS
     entry=`wc -l $i | awk '{print $1;}'`
 
 	 grep -v -w "Ambiguous" $name.phRS > $name.phRS_non
@@ -339,7 +339,7 @@ while read Line
  ##    grep -w $SC _pepTemp |sort -t $'\t' -r -u -k $Quant,$Quant | head -n1 >> _pep
 ##  done
 
-  awk -F"\t" -v EXP="$Exp_Name" -v Label=$Label -v file="$name" -f /research/labs/proteomics/pandey/m202766/programs/consldt_sum.awk _pep  		## >> $name\_sum.xls  
+  awk -F"\t" -v EXP="$Exp_Name" -v Label=$Label -v file="$name" -f "$DIR/consldt_sum.awk" _pep  		## >> $name\_sum.xls  
 ##  awk -F"\t" -v EXP="$Exp_Name" -v Label=$Label -f /xinyanwu/MS_databases/programs/GoDaddy/consldt_ave.awk _pep  >> $name\_ave.xls
 ##  awk -F"\t" -v EXP="$Exp_Name" -v Label=$Label -f /xinyanwu/MS_databases/programs/GoDaddy/consldt_max.awk _pep  >> $name\_max.xls
 
@@ -360,28 +360,28 @@ printf "\n\n"
 
 echo "> Assigning phosphorylation sites based on peptide and protein sequences."
 echo $DB
- /research/labs/proteomics/pandey/m202766/programs/gi2gensymb2 $name\_ave.xls $DB 
+ "$DIR/gi2gensymb2" $name\_ave.xls $DB 
 
  echo "> Merging peptides and protein information with quantification values."
 
- /research/labs/proteomics/pandey/m202766/programs/merg $name\_Sites_T.xls
+ "$DIR/merg" $name\_Sites_T.xls
 
- /research/labs/proteomics/pandey/m202766/programs/Site_quant $name\_Sites_T_ave.xls
+ "$DIR/Site_quant" $name\_Sites_T_ave.xls
 
 fi
 
 if [ "$Label" = "NONE" ]; then
  echo "> Assigning phosphorylation sites based on peptide and protein sequences."
  cp _uniqPep $name\_pep.xls 
- /research/labs/proteomics/pandey/m202766/programs/gi2gensymb2 $name\_pep.xls $DB
+ "$DIR/gi2gensymb2" $name\_pep.xls $DB
 
  echo "> Merging peptides and protein information."
 
- /research/labs/proteomics/pandey/m202766/programs/merg $name\_Sites_T.xls
+ "$DIR/merg" $name\_Sites_T.xls
 
 fi
 
- /research/labs/proteomics/pandey/m202766/programs/Site_quant $name\_Sites_T_ave.xls
+ "$DIR/Site_quant" $name\_Sites_T_ave.xls
 
 ##  rm _*
 ##  cd ..
