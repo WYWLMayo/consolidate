@@ -187,18 +187,22 @@ echo "> Processing quant values ($Label)."
                                     }
 				} else 
  				{if (version == "2.0") 
-					{mPh=0; 
+					{mPh=0;
+					 if (($Rich == "pY") || ($Rich == "IMAC") || ($Rich == "TiO2")) {PTM="Phospho"; ptm="p";}
+ 					 if ($Rich == "AceK") {PTM="Acetyl"; ptm="ace";}
+					 if ($Rich == "UbK") {PTM="GG"; ptm="gg";}
 					 if (Sequence ~ "].") 
 						{n=split(Sequence,pep,"."); Sequence=toupper(pep[2]);}
+						else {Sequence=toupper(Sequence)}
 						 m=split($Modification,MOD,"; "); 
 						 for (i=1; i<=m; i=i+1)
-							   { if (MOD[i] ~ "Phospho") 
+							   { if (MOD[i] ~ PTM) 
 								{mPh=mPh+1; split(MOD[i],PH,"(");  
 								 PhSite[mPh]=substr(PH[1],2);
 								} 
 						            }	
 						  for (m=1; m<=mPh; m=m+1)
-							{ Sequence=substr(Sequence,1,(PhSite[m]+m-2)) "p" substr(Sequence,(PhSite[m]+m-1));
+							{ Sequence=substr(Sequence,1,(PhSite[m]+m-2)) ptm substr(Sequence,(PhSite[m]+m-1));
 							}
 					} else { gsub("m","M",Sequence); gsub("c","C",Sequence);
 					  gsub("k","K",Sequence); gsub("r","R",Sequence); 
