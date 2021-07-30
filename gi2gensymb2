@@ -52,12 +52,14 @@ No_lines=`wc -l $ori_file | awk '{print $1;}'`
            ST_y=ST_y "Y" Sy[i] ", ";
            Py[i]=int_pst+Sy[i]-1;
            if (Py[i] <= 7)
-             { PyWind[i]="-" substr(protein,1,(Py[i]-1)) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,7);
-               Term="yes";
+             { for (p=1;p<=(8-Py[i]);p=p+1) {NT[i]=NT[i] "_";}
+		PyWind[i]=NT[i] substr(protein,1,(Py[i]-1)) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,7);
+               Term="yes"; NT[i]="";
              }   
            if ((Py[i]+7) >= length(protein))
-             { PyWind[i]=substr(protein,Py[i]-7,7) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,(length(protein)-Py[i]-1)) "-";
-               Term="yes";
+             { for (p=1;p<=(8-(length(protein)-Py[i]));p=p+1) {CT[i]=CT[i] "_";}
+		PyWind[i]=substr(protein,Py[i]-7,7) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,(length(protein)-Py[i]-1)) CT[i];
+               Term="yes"; CT[i]="";
              }   
            if (Term != "yes")
              { PyWind[i]=substr(protein,Py[i]-7,7) tolower(substr(protein,Py[i],1)) substr(protein,Py[i]+1,7);
@@ -72,12 +74,14 @@ No_lines=`wc -l $ori_file | awk '{print $1;}'`
           ST_s=ST_s "S" Ss[i] ", ";
           Ps[i]=int_pst+Ss[i]-1;
           if (Ps[i] <= 7)
-           { PsWind[i]="-" substr(protein,1,(Ps[i]-1)) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,7);
-             Term="yes";
+           { for (p=1;p<=(8-Ps[i]);p=p+1) {NT[i]=NT[i] "_";}
+		PsWind[i]=NT[i] substr(protein,1,(Ps[i]-1)) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,7);
+             Term="yes"; NT[i]="";
            }   
           if ((Ps[i]+7) >= length(protein)) 
-           { PsWind[i]=substr(protein,Ps[i]-7,7) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,(length(protein)-Ps[i]-1)) "-";
-             Term="yes";
+           { for (p=1;p<=(8-(length(protein)-Ps[i]));p=p+1) {CT[i]=CT[i] "_";}
+		PsWind_[i]=substr(protein,Ps[i]-7,7) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,(length(protein)-Ps[i]-1)) CT[i];
+             Term="yes"; CT[i]=""; PsWind[i]=substr(PsWind_[i],1,15);
            }   
           if (Term != "yes")
            { PsWind[i]=substr(protein,Ps[i]-7,7) tolower(substr(protein,Ps[i],1)) substr(protein,Ps[i]+1,7);
@@ -92,12 +96,14 @@ No_lines=`wc -l $ori_file | awk '{print $1;}'`
          ST_t=ST_t "T" St[i] ", ";
          Pt[i]=int_pst+St[i]-1;
          if (Pt[i] <= 7)
-          { PtWind[i]="-" substr(protein,1,(Pt[i]-1)) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,7);
-            Term="yes";
+          { for (p=1;p<=(8-Pt[i]);p=p+1) {NT[i]=NT[i] "_";}
+		PtWind[i]=NT[i] substr(protein,1,(Pt[i]-1)) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,7);
+            Term="yes"; NT[i]="";
           }   
       if ((Pt[i]+7) >= length(protein)) 
-       { PtWind[i]=substr(protein,Pt[i]-7,7) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,(length(protein)-Pt[i]-1)) "-";
-         Term="yes";
+       { for (p=1;p<=(8-(length(protein)-Pt[i]));p=p+1) {CT[i]=CT[i] "_";}
+	 PtWind[i]=substr(protein,Pt[i]-7,7) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,(length(protein)-Pt[i]-1)) CT[i];
+         Term="yes"; CT[i]="";
        }   
       if (Term != "yes")
        {PtWind[i]=substr(protein,Pt[i]-7,7) tolower(substr(protein,Pt[i],1)) substr(protein,Pt[i]+1,7);
@@ -112,11 +118,11 @@ No_lines=`wc -l $ori_file | awk '{print $1;}'`
          ST_k=ST_k "K" Sk[i] ", ";
          Pk[i]=int_pst+Sk[i]-1;
          if (Pk[i] <= 7)
-          { PkWind[i]="-" substr(protein,1,(Pk[i]-1)) tolower(substr(protein,Pk[i],1)) substr(protein,Pk[i]+1,7);
+          { PkWind[i]="_" substr(protein,1,(Pk[i]-1)) tolower(substr(protein,Pk[i],1)) substr(protein,Pk[i]+1,7);
             Term="yes";
           }
       if ((Pk[i]+7) >= length(protein))
-       { PkWind[i]=substr(protein,Pk[i]-7,7) tolower(substr(protein,Pk[i],1)) substr(protein,Pk[i]+1,(length(protein)-Pk[i]-1)) "-";
+       { PkWind[i]=substr(protein,Pk[i]-7,7) tolower(substr(protein,Pk[i],1)) substr(protein,Pk[i]+1,(length(protein)-Pk[i]-1)) "_";
          Term="yes";
        }
       if (Term != "yes")
