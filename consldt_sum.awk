@@ -1,19 +1,24 @@
 
 function CV(value)
- { sum=""; n=""; mean="";
+ { sum=""; n=""; mean=""; sum_sd=""; 
    _val=substr(value,1,(length(value)-1));
    n=split(_val,val,",") ; 
    if (n <= 1) 
     { sum=val[1]; mean=val[1]; sd="NA"; cv="NA";
     } else { for (i in val)
-                {sum=sum+val[i]
-                }
-                mean=sum/n
-                for (i in val)
-                {sum_sd=sum_sd+(val[i]-mean)^2
-                }
-                sd=(sum_sd/(n-1))^0.5
-                cv=sd/mean
+                  {sum=sum+val[i]
+                  }
+                 mean=sum/n
+                 for (i in val)
+                  {sum_sd=sum_sd+(val[i]-mean)^2
+                  }
+                 if (sum > 0 ) 
+ 			{ sd=(sum_sd/(n-1))^0.5
+                 	  cv=sd/mean
+			}
+		 else  {sd="NA"; cv="NA"
+			}
+	
   ## print "###",  sum, mean, sd, cv ;
            }     
  }
